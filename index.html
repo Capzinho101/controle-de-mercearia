@@ -1,6 +1,7 @@
+"use client";
 import { useState } from "react";
 
-export default function App() {
+export default function Home() {
   const [dados, setDados] = useState<any[]>([]);
   const [menu, setMenu] = useState("resumo");
 
@@ -59,7 +60,6 @@ export default function App() {
     setValorRecebido("");
   }
 
-  // 🎨 TAG DE PAGAMENTO
   const corTag = (tipo: string) => {
     switch (tipo) {
       case "Dinheiro":
@@ -75,7 +75,6 @@ export default function App() {
     }
   };
 
-  // 📊 CALCULOS
   const totalEntrou = dados
     .filter((d) => d.categoria === "Vendas")
     .reduce((acc, d) => acc + (d.valorProduto || 0), 0);
@@ -91,7 +90,6 @@ export default function App() {
 
   const totalDinheiro = totalPorPagamento("Dinheiro");
 
-  // 💰 CAIXA
   const caixaInicial = toCentavos(trocoInicial);
   const caixaFinal = toCentavos(trocoFinal);
   const caixaEsperado = caixaInicial + totalDinheiro - totalSaiu;
@@ -100,24 +98,23 @@ export default function App() {
   return (
     <div className="flex min-h-screen bg-gray-900 text-white">
 
-      {/* MENU LATERAL */}
+      {/* MENU */}
       <div className="w-64 bg-gray-800 p-4">
 
         <div className="flex flex-col gap-2 mb-4">
-          <button onClick={() => setMenu("resumo")} className="bg-gray-700 p-2">
+          <button onClick={() => setMenu("resumo")} className="bg-gray-700 p-2 rounded">
             Resumo
           </button>
-          <button onClick={() => setMenu("historico")} className="bg-gray-700 p-2">
+          <button onClick={() => setMenu("historico")} className="bg-gray-700 p-2 rounded">
             Histórico
           </button>
-          <button onClick={() => setMenu("caixa")} className="bg-gray-700 p-2">
-            Controle Financeiro
+          <button onClick={() => setMenu("caixa")} className="bg-gray-700 p-2 rounded">
+            Caixa
           </button>
         </div>
 
         {menu === "resumo" && (
           <>
-            <h2 className="text-lg mb-4">Resumo</h2>
             <p>💵 Dinheiro: R$ {toReal(totalPorPagamento("Dinheiro"))}</p>
             <p>💳 Débito: R$ {toReal(totalPorPagamento("Débito"))}</p>
             <p>💳 Crédito: R$ {toReal(totalPorPagamento("Crédito"))}</p>
@@ -126,76 +123,59 @@ export default function App() {
         )}
 
         {menu === "historico" && (
-          <>
-            <h2 className="text-lg mb-2">Histórico de Vendas</h2>
-            <div className="max-h-96 overflow-y-auto text-sm">
-              {dados
-                .filter((d) => d.categoria === "Vendas")
-                .map((d, i) => (
-                  <div key={i} className="mb-2 border-b border-gray-700 pb-2">
-
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p>{d.desc}</p>
-                        <p className="text-gray-400 text-sm">
-                          R$ {toReal(d.valorProduto)}
-                        </p>
-                      </div>
-
-                      <span className={`text-xs px-2 py-1 rounded ${corTag(d.pagamento)}`}>
-                        {d.pagamento}
-                      </span>
-                    </div>
-
-                  </div>
-                ))}
-            </div>
-          </>
+          <div className="max-h-96 overflow-y-auto">
+            {dados.filter(d => d.categoria === "Vendas").map((d, i) => (
+              <div key={i} className="border-b border-gray-700 py-2 flex justify-between">
+                <div>
+                  <p>{d.desc}</p>
+                  <p className="text-sm text-gray-400">
+                    R$ {toReal(d.valorProduto)}
+                  </p>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded ${corTag(d.pagamento)}`}>
+                  {d.pagamento}
+                </span>
+              </div>
+            ))}
+          </div>
         )}
 
         {menu === "caixa" && (
           <>
-            <h2 className="text-lg mb-2">Fechamento de Caixa</h2>
-
             <input
               placeholder="Troco inicial"
               value={trocoInicial}
               onChange={(e) => setTrocoInicial(e.target.value)}
-              className="bg-gray-900 border border-gray-700 p-2 mb-2 w-full"
+              className="bg-gray-900 p-2 w-full mb-2"
             />
-
             <input
               placeholder="Troco final"
               value={trocoFinal}
               onChange={(e) => setTrocoFinal(e.target.value)}
-              className="bg-gray-900 border border-gray-700 p-2 mb-2 w-full"
+              className="bg-gray-900 p-2 w-full mb-2"
             />
-
             <p>Esperado: R$ {toReal(caixaEsperado)}</p>
-
             <p className={diferenca < 0 ? "text-red-400" : "text-green-400"}>
-              Diferença: R$ {toReal(diferenca)}{" "}
-              {diferenca < 0 ? "(Falta)" : "(Lucro)"}
+              Diferença: R$ {toReal(diferenca)}
             </p>
           </>
         )}
       </div>
 
-      {/* CONTEÚDO */}
+      {/* MAIN */}
       <div className="flex-1 p-5">
-        <h1 className="text-2xl mb-4">Controle</h1>
 
         <input
           placeholder="Descrição"
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
-          className="bg-gray-800 border border-gray-700 p-2 mb-2 w-full"
+          className="bg-gray-800 p-2 mb-2 w-full"
         />
 
         <select
           value={categoria}
           onChange={(e) => setCategoria(e.target.value)}
-          className="bg-gray-800 border border-gray-700 p-2 mb-2 w-full"
+          className="bg-gray-800 p-2 mb-2 w-full"
         >
           <option>Conta</option>
           <option>Divida</option>
@@ -203,81 +183,54 @@ export default function App() {
           <option>Vendas</option>
         </select>
 
-        {categoria !== "Vendas" && (
+        {categoria !== "Vendas" ? (
           <input
             placeholder="Valor"
             value={valor}
             onChange={(e) => setValor(e.target.value)}
-            className="bg-gray-800 border border-gray-700 p-2 mb-2 w-full"
+            className="bg-gray-800 p-2 mb-2 w-full"
           />
-        )}
-
-        {categoria === "Vendas" && (
+        ) : (
           <>
             <input
               placeholder="Valor do Produto"
               value={valorProduto}
               onChange={(e) => setValorProduto(e.target.value)}
-              className="bg-gray-800 border border-gray-700 p-2 mb-2 w-full"
+              className="bg-gray-800 p-2 mb-2 w-full"
             />
-
             <input
               placeholder="Valor Recebido"
               value={valorRecebido}
               onChange={(e) => setValorRecebido(e.target.value)}
-              className="bg-gray-800 border border-gray-700 p-2 mb-2 w-full"
+              className="bg-gray-800 p-2 mb-2 w-full"
             />
-
             <select
               value={pagamento}
               onChange={(e) => setPagamento(e.target.value)}
-              className="bg-gray-800 border border-gray-700 p-2 mb-2 w-full"
+              className="bg-gray-800 p-2 mb-2 w-full"
             >
               <option>Dinheiro</option>
               <option>Débito</option>
               <option>Crédito</option>
               <option>Pix</option>
             </select>
-
             <p>Troco: R$ {calcularTroco()}</p>
           </>
         )}
 
-        <button onClick={adicionar} className="bg-green-600 p-2 w-full mt-2">
+        <button
+          onClick={adicionar}
+          className="bg-green-600 p-2 w-full"
+        >
           Adicionar
         </button>
 
-        {/* TABELA */}
         <div className="mt-6">
-          <table className="w-full border border-gray-700">
-            <thead className="bg-gray-800">
-              <tr>
-                <th className="p-2">Tipo</th>
-                <th className="p-2">Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-t border-gray-700">
-                <td className="p-2">Entrou</td>
-                <td className="p-2 text-green-400">
-                  R$ {toReal(totalEntrou)}
-                </td>
-              </tr>
-              <tr className="border-t border-gray-700">
-                <td className="p-2">Saiu</td>
-                <td className="p-2 text-red-400">
-                  R$ {toReal(totalSaiu)}
-                </td>
-              </tr>
-              <tr className="border-t border-gray-700">
-                <td className="p-2">Saldo</td>
-                <td className="p-2">
-                  R$ {toReal(totalEntrou - totalSaiu)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <p className="text-green-400">Entrou: R$ {toReal(totalEntrou)}</p>
+          <p className="text-red-400">Saiu: R$ {toReal(totalSaiu)}</p>
+          <p>Saldo: R$ {toReal(totalEntrou - totalSaiu)}</p>
         </div>
+
       </div>
     </div>
   );
