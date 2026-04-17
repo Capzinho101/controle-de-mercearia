@@ -1,380 +1,284 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>Controle de Gastos</title>
-<script src="https://cdn.tailwindcss.com"></script>
-
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-</head>
-
-<body class="bg-gray-900 text-white p-6">
-
-<button onclick="toggleSidebar()"
-class="fixed top-3 left-3 bg-gray-800 px-3 py-2 rounded z-50">☰</button>
-
-<div id="overlay" class="fixed inset-0 bg-black/50 hidden z-40"
-onclick="closeSidebar()"></div>
-
-<div id="sidebar"
-class="fixed top-0 left-0 w-72 h-full bg-gray-950 p-4 transform -translate-x-full transition z-50 overflow-y-auto">
-
-<h2 class="font-bold mb-4">⚙ Painel</h2>
-
-<div class="bg-gray-900 p-3 rounded mb-4">
-<p class="text-sm mb-2">👤 Conta</p>
-
-<button onclick="login()" class="bg-green-600 w-full p-2 rounded mb-2">
-Login Google
-</button>
-
-<button onclick="logout()" class="bg-red-600 w-full p-2 rounded">
-Sair
-</button>
-
-<p id="userSidebar" class="text-xs mt-2"></p>
-</div>
-
-<div class="mb-4">
-<p class="text-sm">💰 Salário inicial</p>
-<input id="salary" type="number" class="bg-gray-800 p-2 w-full rounded">
-<button onclick="setSalary()" class="bg-blue-600 w-full p-2 rounded mt-2">Salvar</button>
-</div>
-
-<div class="mb-4">
-<p class="text-sm">📅 Dia do ciclo</p>
-<input id="cycle" type="number" min="1" max="31" class="bg-gray-800 p-2 w-full rounded">
-<button onclick="setCycle()" class="bg-purple-600 w-full p-2 rounded mt-2">Salvar</button>
-</div>
-
-<div>
-<p class="text-sm font-bold mb-2">📊 Histórico mensal</p>
-<div id="history" class="text-xs space-y-1"></div>
-</div>
-
-</div>
-
-<h1 class="text-xl font-bold mb-4 ml-10">💰 Controle de Gastos</h1>
-<p id="userMain" class="ml-10 mb-4"></p>
-
-<div class="bg-gray-800 p-4 rounded mb-4 ml-10">
-<input id="desc" class="bg-gray-700 p-2 w-full rounded mb-2" placeholder="Descrição">
-
-<select id="category" class="bg-gray-700 p-2 w-full rounded mb-2">
-<option>💧 Água</option>
-<option>🚌 Transporte</option>
-<option>🏠 Contas</option>
-<option>🍔 Alimentação</option>
-<option>💡 Luz</option>
-<option>💰 Saldo</option>
-<option>📦 Outros</option>
-<option>📉 Dívidas</option>
-</select>
-
-<input id="value" type="number"
-class="bg-gray-700 p-2 w-full rounded mb-2"
-placeholder="Valor">
-
-<button onclick="add()" class="bg-blue-600 w-full p-2 rounded">
-Adicionar
-</button>
-</div>
-
-<div class="grid grid-cols-2 gap-4 text-sm mb-4 ml-10">
-
-<div class="bg-green-900 p-3 rounded">
-Total entradas
-<strong>R$ <span id="income">0</span></strong>
-</div>
-
-<div class="bg-red-900 p-3 rounded">
-Total gastos
-<strong>R$ <span id="expenses">0</span></strong>
-</div>
-
-<div class="bg-blue-900 p-3 rounded">
-Saldo
-<strong>R$ <span id="balance">0</span></strong>
-</div>
-
-<div class="bg-yellow-600 text-black p-3 rounded">
-Dívida restante
-<strong>R$ <span id="debt">0</span></strong>
-</div>
-
-</div>
-
-<h2 class="ml-10 mb-2">📌 Lista</h2>
-<div id="list" class="space-y-2 ml-10"></div>
-
-<script>
-
-// FIREBASE
-const firebaseConfig = {
-  apiKey: "AIzaSyDeXJ_uSeaLgPKRUA1nCV7UFwEzpmiOmHc",
-  authDomain: "meu-controle-financeiro-a0572.firebaseapp.com",
-  projectId: "meu-controle-financeiro-a0572"
-};
-
-firebase.initializeApp(firebaseConfig);
-
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-  
-let userId = null;
-let transactions = {};
-let salary = 0;
-let cycle = 1;
-
-// CICLO
-function getCycleKey() {
-  const today = new Date();
-  let month = today.getMonth() + 1;
-  let year = today.getFullYear();
-
-  if (today.getDate() < cycle) {
-    month--;
-    if(month === 0){
-      month = 12;
-      year--;
-    }
-  }
-
-  return `${year}-${month}`;
-}
-
-// LOGIN
-function login(){
-  const provider = new firebase.auth.GoogleAuthProvider();
-
-  auth.signInWithPopup(provider)
-    .then(result => {
-      console.log("Login OK");
-    })
-    .catch(err => {
-
-      console.log("Erro login:", err);
-
-      // 🔥 fallback se popup for bloqueado
-      if (err.code === "auth/popup-blocked" || err.code === "auth/cancelled-popup-request") {
-        auth.signInWithRedirect(provider);
-      } else {
-        alert("Erro ao logar: " + err.message);
-      }
-    });
-}
-function logout(){
-  auth.signOut();
-}
-
-// AUTH
-auth.onAuthStateChanged(async user => {
-
-  const side = document.getElementById("userSidebar");
-  const main = document.getElementById("userMain");
-
-  if(user){
-    userId = user.uid;
-
-    side.innerText = "Logado: " + user.email;
-    main.innerText = "Logado: " + user.email;
-
-    await load(); // 🔥 garante carregar antes de renderizar
-
-  } else {
-    userId = null;
-    side.innerText = "Faça login";
-    main.innerText = "Faça login";
-
-    // limpa dados locais quando desloga
-    transactions = {};
-    render();
-  }
-});
-
-// SIDEBAR
-function toggleSidebar(){
-  sidebar.classList.toggle("-translate-x-full");
-  overlay.classList.toggle("hidden");
-}
-
-function closeSidebar(){
-  sidebar.classList.add("-translate-x-full");
-  overlay.classList.add("hidden");
-}
-
-// SALÁRIO
-function setSalary(){
-  salary = parseFloat(document.getElementById("salary").value) || 0;
-  save();
-}
-
-// CICLO
-function setCycle(){
-  cycle = parseInt(document.getElementById("cycle").value) || 1;
-  save();
-}
-
-// ADD
-function add(){
-
-  const desc = document.getElementById("desc").value;
-  let value = parseFloat(document.getElementById("value").value);
-  const category = document.getElementById("category").value;
-
-  if(!desc || isNaN(value)) return;
-
-  const key = getCycleKey();
-
-  if(!transactions[key]) transactions[key] = [];
-
-  // 🔥 Se for dívida, força valor negativo
-  if(category === "📉 Dívidas"){
-    value = -Math.abs(value);
-  }
-
-  transactions[key].push({
-    id: Date.now(),
-    desc,
-    value,
-    category,
-    paid: category === "📉 Dívidas" ? false : true // só dívida começa pendente
-  });
-
-  save();
-  render();
-}
-  
-// TOGGLE
-function togglePaid(id){
-
-  const key = getCycleKey();
-  const t = transactions[key].find(x=>x.id===id);
-
-  if(t) t.paid = !t.paid;
-
-  save();
-  render();
-}
-
-// DELETE
-function del(id){
-  const key = getCycleKey();
-  transactions[key] = transactions[key].filter(t=>t.id!==id);
-  save();
-  render();
-}
-
-// SAVE
-async function save(){
-  if(!userId) return;
-
-  await db.collection("users").doc(userId).set({
-    transactions,
-    salary,
-    cycle
-  }, { merge: true }); // 🔥 evita apagar dados antigos
-}
-
-// LOAD
-async function load(){
-  if(!userId) return;
-
-  const doc = await db.collection("users").doc(userId).get();
-
-  if(doc.exists){
-    const data = doc.data();
-
-    transactions = data.transactions || {};
-    salary = data.salary || 0;
-    cycle = data.cycle || 1;
-  }
-
-  // atualiza inputs visuais
-  document.getElementById("salary").value = salary;
-  document.getElementById("cycle").value = cycle;
-
-  render();
-}
-
-// HISTÓRICO
-function renderHistory(){
-  const box = document.getElementById("history");
-  box.innerHTML = "";
-
-  Object.keys(transactions).forEach(key=>{
-    const total = transactions[key].reduce((acc,t)=>acc+t.value,0);
-    box.innerHTML += `<div>${key} → R$ ${total.toFixed(2)}</div>`;
-  });
-}
-
-// RENDER
-function render(){
-
-  const list = document.getElementById("list");
-  list.innerHTML = "";
-
-  const key = getCycleKey();
-  const current = transactions[key] || [];
-
-  let income=0, expenses=0, debt=0;
-
-  current.forEach(t=>{
-
-if(t.value > 0){
-  income += t.value;
-} else {
-
-  if(t.category === "📉 Dívidas"){
-    if(t.paid){
-      expenses += t.value;
+import { useState } from "react";
+
+export default function App() {
+  const [dados, setDados] = useState<any[]>([]);
+  const [menu, setMenu] = useState("resumo");
+
+  const [desc, setDesc] = useState("");
+  const [valor, setValor] = useState("");
+  const [categoria, setCategoria] = useState("Conta");
+
+  const [pagamento, setPagamento] = useState("Dinheiro");
+  const [valorProduto, setValorProduto] = useState("");
+  const [valorRecebido, setValorRecebido] = useState("");
+
+  const [trocoInicial, setTrocoInicial] = useState("");
+  const [trocoFinal, setTrocoFinal] = useState("");
+
+  const toCentavos = (v: string) =>
+    Math.round((parseFloat(v.replace(",", ".")) || 0) * 100);
+
+  const toReal = (v: number) => (v / 100).toFixed(2);
+
+  const calcularTroco = () => {
+    const produto = toCentavos(valorProduto);
+    const recebido = toCentavos(valorRecebido);
+    return toReal(recebido - produto);
+  };
+
+  function adicionar() {
+    if (categoria === "Vendas") {
+      const produto = toCentavos(valorProduto);
+      const recebido = toCentavos(valorRecebido);
+
+      setDados([
+        ...dados,
+        {
+          desc,
+          categoria,
+          pagamento,
+          valorProduto: produto,
+          valorRecebido: recebido,
+          troco: recebido - produto,
+        },
+      ]);
     } else {
-      debt += Math.abs(t.value);
+      setDados([
+        ...dados,
+        {
+          desc,
+          categoria,
+          valor: toCentavos(valor),
+        },
+      ]);
     }
-  } else {
-    expenses += t.value;
+
+    setDesc("");
+    setValor("");
+    setValorProduto("");
+    setValorRecebido("");
   }
 
-}
+  // 🎨 TAG DE PAGAMENTO
+  const corTag = (tipo: string) => {
+    switch (tipo) {
+      case "Dinheiro":
+        return "bg-green-600";
+      case "Pix":
+        return "bg-purple-600";
+      case "Débito":
+        return "bg-blue-600";
+      case "Crédito":
+        return "bg-yellow-400 text-black";
+      default:
+        return "bg-gray-600";
+    }
+  };
 
-   let status="";
+  // 📊 CALCULOS
+  const totalEntrou = dados
+    .filter((d) => d.categoria === "Vendas")
+    .reduce((acc, d) => acc + (d.valorProduto || 0), 0);
 
-if(t.category === "📉 Dívidas"){
-  if(!t.paid){
-    status=`<span class="text-red-400 font-bold ml-2">PENDENTE</span>`;
-  } else {
-    status=`<span class="text-green-400 font-bold ml-2">PAGO</span>`;
-  }
-}
+  const totalSaiu = dados
+    .filter((d) => d.categoria !== "Vendas")
+    .reduce((acc, d) => acc + (d.valor || 0), 0);
 
-    list.innerHTML+=`
-    <div class="bg-gray-800 p-2 rounded flex justify-between">
-      <div>
-        ${t.desc} (${t.category}) - R$ ${t.value}
-        ${status}
+  const totalPorPagamento = (tipo: string) =>
+    dados
+      .filter((d) => d.pagamento === tipo)
+      .reduce((acc, d) => acc + (d.valorProduto || 0), 0);
+
+  const totalDinheiro = totalPorPagamento("Dinheiro");
+
+  // 💰 CAIXA
+  const caixaInicial = toCentavos(trocoInicial);
+  const caixaFinal = toCentavos(trocoFinal);
+  const caixaEsperado = caixaInicial + totalDinheiro - totalSaiu;
+  const diferenca = caixaFinal - caixaEsperado;
+
+  return (
+    <div className="flex min-h-screen bg-gray-900 text-white">
+
+      {/* MENU LATERAL */}
+      <div className="w-64 bg-gray-800 p-4">
+
+        <div className="flex flex-col gap-2 mb-4">
+          <button onClick={() => setMenu("resumo")} className="bg-gray-700 p-2">
+            Resumo
+          </button>
+          <button onClick={() => setMenu("historico")} className="bg-gray-700 p-2">
+            Histórico
+          </button>
+          <button onClick={() => setMenu("caixa")} className="bg-gray-700 p-2">
+            Controle Financeiro
+          </button>
+        </div>
+
+        {menu === "resumo" && (
+          <>
+            <h2 className="text-lg mb-4">Resumo</h2>
+            <p>💵 Dinheiro: R$ {toReal(totalPorPagamento("Dinheiro"))}</p>
+            <p>💳 Débito: R$ {toReal(totalPorPagamento("Débito"))}</p>
+            <p>💳 Crédito: R$ {toReal(totalPorPagamento("Crédito"))}</p>
+            <p>📱 Pix: R$ {toReal(totalPorPagamento("Pix"))}</p>
+          </>
+        )}
+
+        {menu === "historico" && (
+          <>
+            <h2 className="text-lg mb-2">Histórico de Vendas</h2>
+            <div className="max-h-96 overflow-y-auto text-sm">
+              {dados
+                .filter((d) => d.categoria === "Vendas")
+                .map((d, i) => (
+                  <div key={i} className="mb-2 border-b border-gray-700 pb-2">
+
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p>{d.desc}</p>
+                        <p className="text-gray-400 text-sm">
+                          R$ {toReal(d.valorProduto)}
+                        </p>
+                      </div>
+
+                      <span className={`text-xs px-2 py-1 rounded ${corTag(d.pagamento)}`}>
+                        {d.pagamento}
+                      </span>
+                    </div>
+
+                  </div>
+                ))}
+            </div>
+          </>
+        )}
+
+        {menu === "caixa" && (
+          <>
+            <h2 className="text-lg mb-2">Fechamento de Caixa</h2>
+
+            <input
+              placeholder="Troco inicial"
+              value={trocoInicial}
+              onChange={(e) => setTrocoInicial(e.target.value)}
+              className="bg-gray-900 border border-gray-700 p-2 mb-2 w-full"
+            />
+
+            <input
+              placeholder="Troco final"
+              value={trocoFinal}
+              onChange={(e) => setTrocoFinal(e.target.value)}
+              className="bg-gray-900 border border-gray-700 p-2 mb-2 w-full"
+            />
+
+            <p>Esperado: R$ {toReal(caixaEsperado)}</p>
+
+            <p className={diferenca < 0 ? "text-red-400" : "text-green-400"}>
+              Diferença: R$ {toReal(diferenca)}{" "}
+              {diferenca < 0 ? "(Falta)" : "(Lucro)"}
+            </p>
+          </>
+        )}
       </div>
-<div class="flex gap-2">
-  ${t.category === "📉 Dívidas" ? `<button onclick="togglePaid(${t.id})">✔</button>` : ""}
-  <button onclick="del(${t.id})">❌</button>
-</div>
-    </div>`;
-  });
 
-  document.getElementById("income").innerText = income.toFixed(2);
-  document.getElementById("expenses").innerText = Math.abs(expenses).toFixed(2);
-  document.getElementById("balance").innerText = (salary + income + expenses).toFixed(2);
-  document.getElementById("debt").innerText = debt.toFixed(2);
+      {/* CONTEÚDO */}
+      <div className="flex-1 p-5">
+        <h1 className="text-2xl mb-4">Controle</h1>
 
-  renderHistory();
+        <input
+          placeholder="Descrição"
+          value={desc}
+          onChange={(e) => setDesc(e.target.value)}
+          className="bg-gray-800 border border-gray-700 p-2 mb-2 w-full"
+        />
+
+        <select
+          value={categoria}
+          onChange={(e) => setCategoria(e.target.value)}
+          className="bg-gray-800 border border-gray-700 p-2 mb-2 w-full"
+        >
+          <option>Conta</option>
+          <option>Divida</option>
+          <option>Outros</option>
+          <option>Vendas</option>
+        </select>
+
+        {categoria !== "Vendas" && (
+          <input
+            placeholder="Valor"
+            value={valor}
+            onChange={(e) => setValor(e.target.value)}
+            className="bg-gray-800 border border-gray-700 p-2 mb-2 w-full"
+          />
+        )}
+
+        {categoria === "Vendas" && (
+          <>
+            <input
+              placeholder="Valor do Produto"
+              value={valorProduto}
+              onChange={(e) => setValorProduto(e.target.value)}
+              className="bg-gray-800 border border-gray-700 p-2 mb-2 w-full"
+            />
+
+            <input
+              placeholder="Valor Recebido"
+              value={valorRecebido}
+              onChange={(e) => setValorRecebido(e.target.value)}
+              className="bg-gray-800 border border-gray-700 p-2 mb-2 w-full"
+            />
+
+            <select
+              value={pagamento}
+              onChange={(e) => setPagamento(e.target.value)}
+              className="bg-gray-800 border border-gray-700 p-2 mb-2 w-full"
+            >
+              <option>Dinheiro</option>
+              <option>Débito</option>
+              <option>Crédito</option>
+              <option>Pix</option>
+            </select>
+
+            <p>Troco: R$ {calcularTroco()}</p>
+          </>
+        )}
+
+        <button onClick={adicionar} className="bg-green-600 p-2 w-full mt-2">
+          Adicionar
+        </button>
+
+        {/* TABELA */}
+        <div className="mt-6">
+          <table className="w-full border border-gray-700">
+            <thead className="bg-gray-800">
+              <tr>
+                <th className="p-2">Tipo</th>
+                <th className="p-2">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t border-gray-700">
+                <td className="p-2">Entrou</td>
+                <td className="p-2 text-green-400">
+                  R$ {toReal(totalEntrou)}
+                </td>
+              </tr>
+              <tr className="border-t border-gray-700">
+                <td className="p-2">Saiu</td>
+                <td className="p-2 text-red-400">
+                  R$ {toReal(totalSaiu)}
+                </td>
+              </tr>
+              <tr className="border-t border-gray-700">
+                <td className="p-2">Saldo</td>
+                <td className="p-2">
+                  R$ {toReal(totalEntrou - totalSaiu)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
 }
-
-render();
-
-</script>
-
-</body>
-</html>
