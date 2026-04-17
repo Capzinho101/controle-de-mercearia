@@ -22,25 +22,18 @@ export default function Home() {
   const toReal = (v: number) => (v / 100).toFixed(2);
 
   const calcularTroco = () => {
-    const produto = toCentavos(valorProduto);
-    const recebido = toCentavos(valorRecebido);
-    return toReal(recebido - produto);
+    return toReal(toCentavos(valorRecebido) - toCentavos(valorProduto));
   };
 
   function adicionar() {
     if (categoria === "Vendas") {
-      const produto = toCentavos(valorProduto);
-      const recebido = toCentavos(valorRecebido);
-
       setDados([
         ...dados,
         {
           desc,
           categoria,
           pagamento,
-          valorProduto: produto,
-          valorRecebido: recebido,
-          troco: recebido - produto,
+          valorProduto: toCentavos(valorProduto),
         },
       ]);
     } else {
@@ -61,78 +54,58 @@ export default function Home() {
   }
 
   const corTag = (tipo: string) => {
-    switch (tipo) {
-      case "Dinheiro":
-        return "bg-green-600";
-      case "Pix":
-        return "bg-purple-600";
-      case "Débito":
-        return "bg-blue-600";
-      case "Crédito":
-        return "bg-yellow-400 text-black";
-      default:
-        return "bg-gray-600";
-    }
+    if (tipo === "Dinheiro") return "bg-green-600";
+    if (tipo === "Pix") return "bg-purple-600";
+    if (tipo === "Débito") return "bg-blue-600";
+    if (tipo === "Crédito") return "bg-yellow-400 text-black";
+    return "bg-gray-600";
   };
 
   const totalEntrou = dados
     .filter((d) => d.categoria === "Vendas")
-    .reduce((acc, d) => acc + (d.valorProduto || 0), 0);
+    .reduce((a, b) => a + (b.valorProduto || 0), 0);
 
   const totalSaiu = dados
     .filter((d) => d.categoria !== "Vendas")
-    .reduce((acc, d) => acc + (d.valor || 0), 0);
+    .reduce((a, b) => a + (b.valor || 0), 0);
 
   const totalPorPagamento = (tipo: string) =>
     dados
       .filter((d) => d.pagamento === tipo)
-      .reduce((acc, d) => acc + (d.valorProduto || 0), 0);
+      .reduce((a, b) => a + (b.valorProduto || 0), 0);
 
-  const totalDinheiro = totalPorPagamento("Dinheiro");
+  const caixaEsperado =
+    toCentavos(trocoInicial) +
+    totalPorPagamento("Dinheiro") -
+    totalSaiu;
 
-  const caixaInicial = toCentavos(trocoInicial);
-  const caixaFinal = toCentavos(trocoFinal);
-  const caixaEsperado = caixaInicial + totalDinheiro - totalSaiu;
-  const diferenca = caixaFinal - caixaEsperado;
+  const diferenca =
+    toCentavos(trocoFinal) - caixaEsperado;
 
   return (
     <div className="flex min-h-screen bg-gray-900 text-white">
 
       {/* MENU */}
       <div className="w-64 bg-gray-800 p-4">
-
         <div className="flex flex-col gap-2 mb-4">
-          <button onClick={() => setMenu("resumo")} className="bg-gray-700 p-2 rounded">
-            Resumo
-          </button>
-          <button onClick={() => setMenu("historico")} className="bg-gray-700 p-2 rounded">
-            Histórico
-          </button>
-          <button onClick={() => setMenu("caixa")} className="bg-gray-700 p-2 rounded">
-            Caixa
-          </button>
+          <button onClick={() => setMenu("resumo")} className="bg-gray-700 p-2">Resumo</button>
+          <button onClick={() => setMenu("historico")} className="bg-gray-700 p-2">Histórico</button>
+          <button onClick={() => setMenu("caixa")} className="bg-gray-700 p-2">Caixa</button>
         </div>
 
         {menu === "resumo" && (
           <>
-            <p>💵 Dinheiro: R$ {toReal(totalPorPagamento("Dinheiro"))}</p>
-            <p>💳 Débito: R$ {toReal(totalPorPagamento("Débito"))}</p>
-            <p>💳 Crédito: R$ {toReal(totalPorPagamento("Crédito"))}</p>
-            <p>📱 Pix: R$ {toReal(totalPorPagamento("Pix"))}</p>
+            <p>Dinheiro: R$ {toReal(totalPorPagamento("Dinheiro"))}</p>
+            <p>Pix: R$ {toReal(totalPorPagamento("Pix"))}</p>
           </>
         )}
 
         {menu === "historico" && (
-          <div className="max-h-96 overflow-y-auto">
+          <div>
             {dados.filter(d => d.categoria === "Vendas").map((d, i) => (
-              <div key={i} className="border-b border-gray-700 py-2 flex justify-between">
-                <div>
-                  <p>{d.desc}</p>
-                  <p className="text-sm text-gray-400">
-                    R$ {toReal(d.valorProduto)}
-                  </p>
-                </div>
-                <span className={`text-xs px-2 py-1 rounded ${corTag(d.pagamento)}`}>
+              <div key={i} className="flex justify-between border-b py-2">
+                <span>{d.desc}</span>
+                <span className={`px-2 text-xs rounded ${corTag(d.pagamento)}`}>
                   {d.pagamento}
                 </span>
               </div>
@@ -142,18 +115,14 @@ export default function Home() {
 
         {menu === "caixa" && (
           <>
-            <input
-              placeholder="Troco inicial"
-              value={trocoInicial}
-              onChange={(e) => setTrocoInicial(e.target.value)}
-              className="bg-gray-900 p-2 w-full mb-2"
-            />
-            <input
-              placeholder="Troco final"
-              value={trocoFinal}
-              onChange={(e) => setTrocoFinal(e.target.value)}
-              className="bg-gray-900 p-2 w-full mb-2"
-            />
+            <input placeholder="Inicial" value={trocoInicial}
+              onChange={e => setTrocoInicial(e.target.value)}
+              className="bg-gray-900 p-2 mb-2 w-full" />
+
+            <input placeholder="Final" value={trocoFinal}
+              onChange={e => setTrocoFinal(e.target.value)}
+              className="bg-gray-900 p-2 mb-2 w-full" />
+
             <p>Esperado: R$ {toReal(caixaEsperado)}</p>
             <p className={diferenca < 0 ? "text-red-400" : "text-green-400"}>
               Diferença: R$ {toReal(diferenca)}
@@ -165,18 +134,14 @@ export default function Home() {
       {/* MAIN */}
       <div className="flex-1 p-5">
 
-        <input
-          placeholder="Descrição"
+        <input placeholder="Descrição"
           value={desc}
-          onChange={(e) => setDesc(e.target.value)}
-          className="bg-gray-800 p-2 mb-2 w-full"
-        />
+          onChange={e => setDesc(e.target.value)}
+          className="bg-gray-800 p-2 mb-2 w-full" />
 
-        <select
-          value={categoria}
-          onChange={(e) => setCategoria(e.target.value)}
-          className="bg-gray-800 p-2 mb-2 w-full"
-        >
+        <select value={categoria}
+          onChange={e => setCategoria(e.target.value)}
+          className="bg-gray-800 p-2 mb-2 w-full">
           <option>Conta</option>
           <option>Divida</option>
           <option>Outros</option>
@@ -184,50 +149,42 @@ export default function Home() {
         </select>
 
         {categoria !== "Vendas" ? (
-          <input
-            placeholder="Valor"
+          <input placeholder="Valor"
             value={valor}
-            onChange={(e) => setValor(e.target.value)}
-            className="bg-gray-800 p-2 mb-2 w-full"
-          />
+            onChange={e => setValor(e.target.value)}
+            className="bg-gray-800 p-2 mb-2 w-full" />
         ) : (
           <>
-            <input
-              placeholder="Valor do Produto"
+            <input placeholder="Produto"
               value={valorProduto}
-              onChange={(e) => setValorProduto(e.target.value)}
-              className="bg-gray-800 p-2 mb-2 w-full"
-            />
-            <input
-              placeholder="Valor Recebido"
+              onChange={e => setValorProduto(e.target.value)}
+              className="bg-gray-800 p-2 mb-2 w-full" />
+
+            <input placeholder="Recebido"
               value={valorRecebido}
-              onChange={(e) => setValorRecebido(e.target.value)}
-              className="bg-gray-800 p-2 mb-2 w-full"
-            />
-            <select
-              value={pagamento}
-              onChange={(e) => setPagamento(e.target.value)}
-              className="bg-gray-800 p-2 mb-2 w-full"
-            >
+              onChange={e => setValorRecebido(e.target.value)}
+              className="bg-gray-800 p-2 mb-2 w-full" />
+
+            <select value={pagamento}
+              onChange={e => setPagamento(e.target.value)}
+              className="bg-gray-800 p-2 mb-2 w-full">
               <option>Dinheiro</option>
+              <option>Pix</option>
               <option>Débito</option>
               <option>Crédito</option>
-              <option>Pix</option>
             </select>
+
             <p>Troco: R$ {calcularTroco()}</p>
           </>
         )}
 
-        <button
-          onClick={adicionar}
-          className="bg-green-600 p-2 w-full"
-        >
+        <button onClick={adicionar} className="bg-green-600 p-2 w-full">
           Adicionar
         </button>
 
         <div className="mt-6">
-          <p className="text-green-400">Entrou: R$ {toReal(totalEntrou)}</p>
-          <p className="text-red-400">Saiu: R$ {toReal(totalSaiu)}</p>
+          <p>Entrou: R$ {toReal(totalEntrou)}</p>
+          <p>Saiu: R$ {toReal(totalSaiu)}</p>
           <p>Saldo: R$ {toReal(totalEntrou - totalSaiu)}</p>
         </div>
 
