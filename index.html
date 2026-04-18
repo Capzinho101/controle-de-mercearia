@@ -5,10 +5,6 @@
 <title>Controle Financeiro</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
-
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 
 <body class="bg-gray-900 text-white">
@@ -16,11 +12,6 @@
 <!-- MENU -->
 <div id="sidebar" class="fixed left-[-260px] top-0 w-64 h-full bg-gray-800 p-4 transition-all z-50">
   <h2 class="text-xl mb-4">Menu</h2>
-
-  <button onclick="login()" class="bg-green-600 w-full p-2 mb-2 rounded">Login</button>
-  <button onclick="logout()" class="bg-gray-600 w-full p-2 mb-2 rounded">Sair</button>
-
-  <hr class="my-3">
 
   <p class="mb-2">Resumo:</p>
   <p>💵 Dinheiro: R$ <span id="resDinheiro">0</span></p>
@@ -45,8 +36,6 @@
 <div class="max-w-2xl mx-auto bg-gray-800 p-6 rounded mt-16">
 
 <h1 class="text-xl mb-4">💰 Controle</h1>
-
-<div id="app" style="display:none;">
 
 <input id="desc" placeholder="Descrição" class="w-full p-2 mb-2 bg-gray-700 rounded">
 
@@ -82,38 +71,9 @@
 <ul id="historico"></ul>
 
 </div>
-</div>
 
 <script>
-// FIREBASE CONFIG
-firebase.initializeApp({
-  apiKey: "AIzaSyDeXJ_uSeaLgPKRUA1nCV7UFwEzpmiOmHc",
-  authDomain: "meu-controle-financeiro-a0572.firebaseapp.com",
-  projectId: "meu-controle-financeiro-a0572",
-});
-
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-let userId = null;
-let dados = [];
-let historico = [];
-
-// LOGIN
-function login(){
-  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-}
-function logout(){
-  auth.signOut();
-}
-
-auth.onAuthStateChanged(user=>{
-  if(user){
-    userId = user.uid;
-    document.getElementById("app").style.display="block";
-    load();
-  }
-});
+let dados = JSON.parse(localStorage.getItem("dados")) || [];
 
 // MENU
 function toggleMenu(){
@@ -128,7 +88,7 @@ function calcTroco(){
   troco.innerText = ((r-p)/100).toFixed(2);
 }
 
-// MOSTRAR VENDAS
+// VENDAS
 function toggleVenda(){
   vendasBox.classList.toggle("hidden", categoria.value!=="Vendas");
 }
@@ -136,6 +96,8 @@ function toggleVenda(){
 // ADD
 function add(){
   const desc = document.getElementById("desc").value;
+
+  if(!desc) return alert("Digite a descrição");
 
   if(categoria.value==="Vendas"){
     dados.push({
@@ -148,10 +110,11 @@ function add(){
     dados.push({
       desc,
       categoria: categoria.value,
-      valor: parseFloat(valor.value)
+      valor: parseFloat(valor.value) || 0
     });
   }
 
+  salvar();
   atualizar();
 }
 
@@ -162,7 +125,7 @@ function atualizar(){
 
   let dinheiro=0, debito=0, credito=0, pix=0;
 
-  dados.forEach(d=>{
+  dados.forEach((d,i)=>{
     const li=document.createElement("li");
     li.className="bg-gray-700 p-2 mt-1 flex justify-between";
 
@@ -178,7 +141,7 @@ function atualizar(){
       if(d.pagamento==="Pix") pix+=d.valorProduto;
 
     } else {
-      li.innerHTML = `${d.desc} - R$ ${d.valor}`;
+      li.innerHTML = `${d.desc} - R$ ${d.valor.toFixed(2)}`;
     }
 
     lista.appendChild(li);
@@ -194,22 +157,15 @@ function atualizar(){
   const final = parseFloat(trocoFinal.value)||0;
 
   diferenca.innerText = (final - esperado).toFixed(2);
-
-  salvar();
 }
 
-// FIREBASE
-async function load(){
-  const doc = await db.collection("users").doc(userId).get();
-  if(doc.exists){
-    dados = doc.data().dados || [];
-  }
-  atualizar();
+// SAVE LOCAL
+function salvar(){
+  localStorage.setItem("dados", JSON.stringify(dados));
 }
 
-async function salvar(){
-  await db.collection("users").doc(userId).set({dados});
-}
+// INIT
+atualizar();
 </script>
 
 </body>
