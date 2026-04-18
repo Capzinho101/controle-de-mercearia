@@ -146,7 +146,16 @@ function toggleMenu(){
 
 // LOGIN
 function login(){
-  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+  const provider = new firebase.auth.GoogleAuthProvider();
+
+  auth.signInWithPopup(provider)
+    .then(result => {
+      console.log("Login realizado:", result.user);
+    })
+    .catch(error => {
+      console.error("Erro no login:", error);
+      alert("Erro ao fazer login: " + error.message);
+    });
 }
 function logout(){
   auth.signOut();
@@ -292,12 +301,16 @@ function atualizarHistorico(){
   diferenca.innerText = diferencaValor.toFixed(2);
 }
   // REMOVER
-  function remover(i){
-  if(confirm("Deseja excluir?")){
-    dados.splice(i,1);
-    salvar();
-    atualizar();
-  }
+function remover(i){
+  if(i < 0 || i >= dados.length) return;
+
+  const confirmar = confirm("Deseja excluir essa venda?");
+  if(!confirmar) return;
+
+  dados.splice(i,1);
+
+  salvar();
+  atualizar();
 }
 // FIREBASE
 async function load(){
