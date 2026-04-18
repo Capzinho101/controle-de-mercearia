@@ -93,24 +93,27 @@ function toggleVenda(){
   vendasBox.classList.toggle("hidden", categoria.value!=="Vendas");
 }
 
-// ADD
 function add(){
   const desc = document.getElementById("desc").value;
 
   if(!desc) return alert("Digite a descrição");
+
+  const dataAtual = new Date();
 
   if(categoria.value==="Vendas"){
     dados.push({
       desc,
       categoria:"Vendas",
       valorProduto: Math.round(valorProduto.value*100),
-      pagamento: pagamento.value
+      pagamento: pagamento.value,
+      data: dataAtual
     });
   } else {
     dados.push({
       desc,
       categoria: categoria.value,
-      valor: parseFloat(valor.value) || 0
+      valor: parseFloat(valor.value) || 0,
+      data: dataAtual
     });
   }
 
