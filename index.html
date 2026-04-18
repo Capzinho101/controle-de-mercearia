@@ -265,11 +265,11 @@ function atualizar(){
     if(d.categoria==="Vendas"){
       li.innerHTML = `${d.desc} - R$ ${(d.valorProduto/100).toFixed(2)} <span>${d.pagamento}</span>`;
 
-      if(d.pagamento==="Dinheiro") dinheiro+=d.valorProduto;
-      if(d.pagamento==="Débito") debito+=d.valorProduto;
-      if(d.pagamento==="Crédito") credito+=d.valorProduto;
-      if(d.pagamento==="Pix") pix+=d.valorProduto;
-
+   dinheiro += (d.valorProduto || 0);
+   debito += (d.valorProduto || 0);
+   credito += (d.valorProduto || 0);
+   pix += (d.valorProduto || 0);
+      
     } else {
     li.innerHTML = `
   <div>
@@ -280,7 +280,7 @@ function atualizar(){
       : d.categoria==="Divida"
       ? `${d.desc} - R$ ${Math.abs(d.valor).toFixed(2)}`
 
-      : `${d.desc} - R$ ${d.valor.toFixed(2)}`
+      : `${d.desc} - R$ ${(d.valor || 0).toFixed(2)}`
     }
   </div>
 
