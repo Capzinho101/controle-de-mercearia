@@ -115,11 +115,14 @@
 
 <script>
 // FIREBASE
-firebase.initializeApp({
+const firebaseConfig = {
   apiKey: "AIzaSyDeXJ_uSeaLgPKRUA1nCV7UFwEzpmiOmHc",
   authDomain: "meu-controle-financeiro-a0572.firebaseapp.com",
   projectId: "meu-controle-financeiro-a0572",
-});
+  storageBucket: "meu-controle-financeiro-a0572.firebasestorage.app",
+  messagingSenderId: "202199536593",
+  appId: "1:202199536593:web:5ec609a43788066886c6f0"
+};
 
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -157,6 +160,7 @@ function login(){
       alert("Erro ao fazer login: " + error.message);
     });
 }
+// LOGOUT
 function logout(){
   auth.signOut();
 }
