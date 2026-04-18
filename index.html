@@ -238,7 +238,16 @@ function atualizar(){
       if(d.pagamento === "Crédito") credito += valor;
       if(d.pagamento === "Pix") pix += valor;
 
-      li.innerHTML = `${d.desc} - R$ ${(valor/100).toFixed(2)} <span>${d.pagamento}</span>`;
+      li.innerHTML = `
+        <div>
+          ${d.desc} - R$ ${(valor/100).toFixed(2)} <span>${d.pagamento}</span>
+        </div>
+
+        <div>
+          <button onclick="editarVenda(${i})" class="px-2 py-1 bg-yellow-500 rounded text-xs">Editar</button>
+          <button onclick="remover(${i})" class="px-2 py-1 bg-red-500 rounded text-xs">Excluir</button>
+        </div>
+      `;
 
     } else {
 
@@ -271,6 +280,29 @@ function atualizar(){
   el("resPix").innerText = (pix/100).toFixed(2);
 }
 
+function editarVenda(i){
+  const v = dados[i];
+
+  const novoDesc = prompt("Descrição:", v.desc);
+  if(!novoDesc) return;
+
+  const novoValor = prompt("Valor do produto (ex: 10.50):", (v.valorProduto/100).toFixed(2));
+  if(!novoValor) return;
+
+  const novoPagamento = prompt("Pagamento (Dinheiro, Débito, Crédito, Pix):", v.pagamento);
+  if(!novoPagamento) return;
+
+  dados[i] = {
+    ...v,
+    desc: novoDesc,
+    valorProduto: Math.round(parseFloat(novoValor)*100),
+    pagamento: novoPagamento
+  };
+
+  salvar();
+  atualizar();
+}
+  
 function toggleDivida(i){
   dados[i].status = dados[i].status === "pendente" ? "pago" : "pendente";
   salvar();
