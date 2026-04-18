@@ -21,9 +21,24 @@
 
   <h2 class="text-xl mb-4">Menu</h2>
 
-  <button onclick="login()" class="bg-green-600 w-full p-2 mb-2 rounded">Login</button>
-  <button onclick="logout()" class="bg-gray-600 w-full p-2 mb-4 rounded">Sair</button>
+<div id="userArea">
 
+  <button id="btnLogin" onclick="login()" 
+    class="bg-green-600 w-full p-2 mb-2 rounded">
+    Login
+  </button>
+
+  <div id="userInfo" class="hidden">
+    <p class="mb-2">👤 <span id="userName"></span></p>
+
+    <button onclick="logout()" 
+      class="bg-gray-600 w-full p-2 mb-2 rounded">
+      Sair
+    </button>
+  </div>
+
+</div>
+  
   <hr class="mb-4">
 
   <h3 class="font-bold mb-2">📅 Histórico</h3>
@@ -111,6 +126,7 @@ const db = firebase.firestore();
 
 let userId = null;
 let dados = [];
+let userName = "";
 
 // MENU
 function toggleMenu(){
@@ -143,7 +159,19 @@ auth.onAuthStateChanged(user=>{
     load();
   }
 });
+auth.onAuthStateChanged(async user=>{
+  if(user){
+    userId = user.uid;
+    document.getElementById("app").style.display="block";
 
+    await loadUserName();
+    load();
+  } else {
+    document.getElementById("btnLogin").style.display = "block";
+    document.getElementById("userInfo").classList.add("hidden");
+  }
+});
+  
 // TROCO
 function calcTroco(){
   const p = Math.round((parseFloat(valorProduto.value)||0)*100);
@@ -217,7 +245,24 @@ function atualizar(){
 
   atualizarHistorico();
 }
+// NAME
+  async function loadUserName(){
+  const ref = db.collection("users").doc(userId);
+  const doc = await ref.get();
 
+  if(doc.exists && doc.data().nome){
+    userName = doc.data().nome;
+  } else {
+    userName = prompt("Digite seu nome:");
+    await ref.set({ nome: userName }, { merge: true });
+  }
+
+  document.getElementById("userName").innerText = userName;
+
+  // UI
+  document.getElementById("btnLogin").style.display = "none";
+  document.getElementById("userInfo").classList.remove("hidden");
+}
 // HISTÓRICO
 function atualizarHistorico(){
   const dataFiltro = document.getElementById("filtroData").value;
@@ -264,7 +309,10 @@ async function load(){
 }
 
 async function salvar(){
-  await db.collection("users").doc(userId).set({dados});
+  await db.collection("users").doc(userId).set({
+    dados,
+    nome: userName
+  });
 }
 
 // INIT DATA
