@@ -93,27 +93,24 @@ function toggleVenda(){
   vendasBox.classList.toggle("hidden", categoria.value!=="Vendas");
 }
 
+// ADD
 function add(){
   const desc = document.getElementById("desc").value;
 
   if(!desc) return alert("Digite a descrição");
-
-  const dataAtual = new Date();
 
   if(categoria.value==="Vendas"){
     dados.push({
       desc,
       categoria:"Vendas",
       valorProduto: Math.round(valorProduto.value*100),
-      pagamento: pagamento.value,
-      data: dataAtual
+      pagamento: pagamento.value
     });
   } else {
     dados.push({
       desc,
       categoria: categoria.value,
-      valor: parseFloat(valor.value) || 0,
-      data: dataAtual
+      valor: parseFloat(valor.value) || 0
     });
   }
 
@@ -148,42 +145,7 @@ function atualizar(){
     }
 
     lista.appendChild(li);
-    }
-                
-  const historicoDiv = document.getElementById("historico");
-historicoDiv.innerHTML = "";
-
-const agrupado = {};
-
-dados.forEach(d => {
-  const data = new Date(d.data);
-  const chave = data.toLocaleDateString();
-
-  if(!agrupado[chave]) agrupado[chave] = [];
-  agrupado[chave].push(d);
-});
-
-Object.keys(agrupado).reverse().forEach(data => {
-
-  const titulo = document.createElement("h3");
-  titulo.className = "mt-4 font-bold text-yellow-400";
-  titulo.innerText = "📅 " + data;
-  historicoDiv.appendChild(titulo);
-
-  agrupado[data].forEach(d => {
-    const item = document.createElement("div");
-    item.className = "text-sm text-gray-300";
-
-    if(d.categoria==="Vendas"){
-      item.innerText = `${d.desc} - R$ ${(d.valorProduto/100).toFixed(2)} (${d.pagamento})`;
-    } else {
-      item.innerText = `${d.desc} - R$ ${d.valor.toFixed(2)}`;
-    }
-
-    historicoDiv.appendChild(item);
   });
-
-});
 
   resDinheiro.innerText=(dinheiro/100).toFixed(2);
   resDebito.innerText=(debito/100).toFixed(2);
