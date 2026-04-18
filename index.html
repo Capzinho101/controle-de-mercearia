@@ -205,6 +205,16 @@ function add(){
       pagamento: pagamento.value,
       data: hoje
     });
+    
+    } else if(categoria.value==="Divida"){
+  dados.push({
+    desc,
+    categoria: "Divida",
+    valor: -Math.abs(parseFloat(valor.value) || 0), // 👈 negativo automático
+    status: "pendente",
+    data: hoje
+  });
+    
   } else {
     dados.push({
       desc,
@@ -218,6 +228,26 @@ function add(){
   atualizar();
 }
 
+// TAG DIVIDA
+  function toggleDivida(i){
+  const item = dados[i];
+
+  if(item.status === "pendente"){
+    item.status = "pago";
+
+    // vira gasto real (continua negativo)
+    item.valor = -Math.abs(item.valor);
+
+  } else {
+    item.status = "pendente";
+
+    // mantém como dívida (não entra no gasto ainda)
+    item.valor = -Math.abs(item.valor);
+  }
+
+  salvar();
+  atualizar();
+}
 // UI
 function atualizar(){
   const lista = document.getElementById("lista");
@@ -238,8 +268,33 @@ function atualizar(){
       if(d.pagamento==="Pix") pix+=d.valorProduto;
 
     } else {
-      li.innerHTML = `${d.desc} - R$ ${d.valor.toFixed(2)}`;
+    li.innerHTML = `
+  <div>
+    ${
+      d.categoria==="Vendas"
+      ? `${d.desc} - R$ ${(d.valorProduto/100).toFixed(2)} (${d.pagamento})`
+
+      : d.categoria==="Divida"
+      ? `${d.desc} - R$ ${Math.abs(d.valor).toFixed(2)}`
+
+      : `${d.desc} - R$ ${d.valor.toFixed(2)}`
     }
+  </div>
+
+  <div class="flex gap-2 items-center">
+    ${
+      d.categoria==="Divida"
+      ? `<button onclick="toggleDivida(${i})"
+          class="${d.status==="pendente" ? "bg-red-500" : "bg-green-500"} px-2 py-1 rounded text-xs">
+          ${d.status}
+        </button>`
+      : ""
+    }
+
+    <button onclick="editar(${i})" class="text-yellow-400">✏️</button>
+    <button onclick="remover(${i})" class="text-red-400">❌</button>
+  </div>
+`;
 
     lista.appendChild(li);
   });
