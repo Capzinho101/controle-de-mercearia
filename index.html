@@ -165,7 +165,9 @@ function logout(){
   auth.signOut();
 }
 
-auth.onAuthStateChanged(async user=>{
+auth.onAuthStateChanged(async user => {
+  console.log("Auth state:", user);
+
   if(user){
     userId = user.uid;
     document.getElementById("app").style.display="block";
@@ -173,6 +175,7 @@ auth.onAuthStateChanged(async user=>{
     await loadUserName();
     load();
   } else {
+    document.getElementById("app").style.display="none";
     document.getElementById("btnLogin").style.display = "block";
     document.getElementById("userInfo").classList.add("hidden");
   }
