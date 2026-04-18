@@ -219,7 +219,7 @@ function atualizar(){
 
   let dinheiro=0, debito=0, credito=0, pix=0;
 
-  dados.forEach(d=>{
+  dados.forEach((d, i)=>{
     const li=document.createElement("li");
     li.className="bg-gray-700 p-2 mt-1 flex justify-between";
 
@@ -297,6 +297,39 @@ function atualizarHistorico(){
   const diferencaValor = final - esperado;
 
   diferenca.innerText = diferencaValor.toFixed(2);
+}
+  // REMOVER
+  function remover(i){
+  if(confirm("Deseja excluir?")){
+    dados.splice(i,1);
+    salvar();
+    atualizar();
+  }
+}
+  // EDITAR
+  function editar(i){
+  const d = dados[i];
+
+  const novaDesc = prompt("Editar descrição:", d.desc);
+  if(novaDesc === null) return;
+
+  if(d.categoria === "Vendas"){
+    const novoValor = prompt("Editar valor:", (d.valorProduto/100).toFixed(2));
+    if(novoValor === null) return;
+
+    d.desc = novaDesc;
+    d.valorProduto = Math.round(parseFloat(novoValor) * 100);
+
+  } else {
+    const novoValor = prompt("Editar valor:", d.valor);
+    if(novoValor === null) return;
+
+    d.desc = novaDesc;
+    d.valor = parseFloat(novoValor);
+  }
+
+  salvar();
+  atualizar();
 }
 
 // FIREBASE
