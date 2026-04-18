@@ -128,12 +128,10 @@ let userId = null;
 let dados = [];
 let userName = "";
 
-// helper seguro (evita quebrar tudo)
 function el(id){
   return document.getElementById(id);
 }
 
-// MENU
 function toggleMenu(){
   const menu = el("sidebar");
   const overlay = el("overlay");
@@ -149,27 +147,21 @@ function toggleMenu(){
   }
 }
 
-// LOGIN
 function login(){
   const provider = new firebase.auth.GoogleAuthProvider();
-
-  auth.signInWithPopup(provider)
-    .catch(e => alert(e.message));
+  auth.signInWithPopup(provider).catch(e => alert(e.message));
 }
 
 function logout(){
   auth.signOut();
 }
 
-// AUTH
 auth.onAuthStateChanged(async user => {
   if(user){
     userId = user.uid;
-
     el("app").style.display = "block";
     el("btnLogin").style.display = "none";
     el("userInfo").classList.remove("hidden");
-
     await loadUserName();
     load();
   } else {
@@ -179,19 +171,16 @@ auth.onAuthStateChanged(async user => {
   }
 });
 
-// TROCO
 function calcTroco(){
   const p = Math.round((parseFloat(el("valorProduto")?.value)||0)*100);
   const r = Math.round((parseFloat(el("valorRecebido")?.value)||0)*100);
   el("troco").innerText = ((r-p)/100).toFixed(2);
 }
 
-// VENDAS
 function toggleVenda(){
   el("vendasBox").classList.toggle("hidden", el("categoria").value !== "Vendas");
 }
 
-// ADD
 function add(){
   const desc = el("desc").value;
   if(!desc) return alert("Digite a descrição");
@@ -229,7 +218,6 @@ function add(){
   atualizar();
 }
 
-// UI
 function atualizar(){
   const lista = el("lista");
   lista.innerHTML = "";
@@ -243,12 +231,14 @@ function atualizar(){
 
     if(d.categoria === "Vendas"){
 
-      li.innerHTML = `${d.desc} - R$ ${(d.valorProduto/100||0).toFixed(2)} <span>${d.pagamento}</span>`;
+      const valor = d.valorProduto || 0;
 
-      dinheiro += (d.valorProduto||0);
-      debito += (d.valorProduto||0);
-      credito += (d.valorProduto||0);
-      pix += (d.valorProduto||0);
+      if(d.pagamento === "Dinheiro") dinheiro += valor;
+      if(d.pagamento === "Débito") debito += valor;
+      if(d.pagamento === "Crédito") credito += valor;
+      if(d.pagamento === "Pix") pix += valor;
+
+      li.innerHTML = `${d.desc} - R$ ${(valor/100).toFixed(2)} <span>${d.pagamento}</span>`;
 
     } else {
 
@@ -279,25 +269,20 @@ function atualizar(){
   el("resDebito").innerText = (debito/100).toFixed(2);
   el("resCredito").innerText = (credito/100).toFixed(2);
   el("resPix").innerText = (pix/100).toFixed(2);
-
-  atualizarHistorico();
 }
 
-// DIVIDA
 function toggleDivida(i){
   dados[i].status = dados[i].status === "pendente" ? "pago" : "pendente";
   salvar();
   atualizar();
 }
 
-// REMOVER
 function remover(i){
   dados.splice(i,1);
   salvar();
   atualizar();
 }
 
-// FIRESTORE
 async function load(){
   const doc = await db.collection("users").doc(userId).get();
   if(doc.exists) dados = doc.data().dados || [];
@@ -308,7 +293,6 @@ async function salvar(){
   await db.collection("users").doc(userId).set({ dados, nome: userName });
 }
 
-// USER
 async function loadUserName(){
   const ref = db.collection("users").doc(userId);
   const doc = await ref.get();
@@ -321,13 +305,6 @@ async function loadUserName(){
   }
 
   el("userName").innerText = userName;
-}
-
-// HISTÓRICO (mínimo pra não quebrar)
-function atualizarHistorico(){
-  const historico = el("historico");
-  if(!historico) return;
-  historico.innerHTML = "";
 }
 
 const hoje = new Date().toISOString().split("T")[0];
