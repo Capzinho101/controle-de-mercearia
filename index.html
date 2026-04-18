@@ -5,21 +5,38 @@
 <title>Controle Financeiro</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 
 <body class="bg-gray-900 text-white">
 
+<!-- OVERLAY -->
+<div id="overlay" onclick="toggleMenu()" class="fixed inset-0 bg-black bg-opacity-50 hidden z-40"></div>
+
 <!-- MENU -->
-<div id="sidebar" class="fixed -left-64 top-0 w-64 h-full bg-gray-800 p-4 transition-all duration-300 z-50">
+<div id="sidebar" class="fixed -left-64 top-0 w-72 h-full bg-gray-800 p-4 transition-all duration-300 z-50 overflow-y-auto">
+
   <h2 class="text-xl mb-4">Menu</h2>
 
-  <p class="mb-2">Resumo:</p>
-  <p>💵 Dinheiro: R$ <span id="resDinheiro">0</span></p>
-  <p>💳 Débito: R$ <span id="resDebito">0</span></p>
-  <p>💳 Crédito: R$ <span id="resCredito">0</span></p>
-  <p>📱 Pix: R$ <span id="resPix">0</span></p>
+  <button onclick="login()" class="bg-green-600 w-full p-2 mb-2 rounded">Login</button>
+  <button onclick="logout()" class="bg-gray-600 w-full p-2 mb-4 rounded">Sair</button>
 
-  <hr class="my-3">
+  <hr class="mb-4">
+
+  <h3 class="font-bold mb-2">📅 Histórico</h3>
+
+  <input type="date" id="filtroData"
+    class="bg-gray-700 p-2 rounded mb-3 w-full"
+    onchange="filtrarPorData()">
+
+  <div id="historico"></div>
+
+  <hr class="my-4">
+
+  <h3 class="font-bold mb-2">💰 Caixa</h3>
 
   <p>Troco inicial:</p>
   <input id="trocoInicial" class="w-full p-2 bg-gray-700 mb-2">
@@ -28,14 +45,26 @@
   <input id="trocoFinal" class="w-full p-2 bg-gray-700 mb-2">
 
   <p>Diferença: R$ <span id="diferenca">0</span></p>
+
+  <hr class="my-4">
+
+  <h3 class="font-bold mb-2">📊 Resumo</h3>
+
+  <p>💵 Dinheiro: R$ <span id="resDinheiro">0</span></p>
+  <p>💳 Débito: R$ <span id="resDebito">0</span></p>
+  <p>💳 Crédito: R$ <span id="resCredito">0</span></p>
+  <p>📱 Pix: R$ <span id="resPix">0</span></p>
+
 </div>
 
-<button onclick="toggleMenu()" class="fixed top-4 left-4 bg-blue-600 px-3 py-2 rounded">☰</button>
+<button onclick="toggleMenu()" class="fixed top-4 left-4 bg-blue-600 px-3 py-2 rounded z-50">☰</button>
 
 <!-- APP -->
 <div class="max-w-2xl mx-auto bg-gray-800 p-6 rounded mt-16">
 
 <h1 class="text-xl mb-4">💰 Controle</h1>
+
+<div id="app" style="display:none;">
 
 <input id="desc" placeholder="Descrição" class="w-full p-2 mb-2 bg-gray-700 rounded">
 
@@ -48,7 +77,6 @@
 
 <input id="valor" type="number" placeholder="Valor" class="w-full p-2 mb-2 bg-gray-700 rounded">
 
-<!-- VENDAS -->
 <div id="vendasBox" class="hidden">
   <input id="valorProduto" type="number" placeholder="Valor produto" class="w-full p-2 mb-2 bg-gray-700 rounded">
   <input id="valorRecebido" type="number" placeholder="Valor recebido" oninput="calcTroco()" class="w-full p-2 mb-2 bg-gray-700 rounded">
@@ -67,32 +95,54 @@
 
 <ul id="lista" class="mt-4"></ul>
 
-<!-- CALENDÁRIO -->
-<h2 class="mt-6">📅 Histórico por data</h2>
-
-<input type="date" id="filtroData"
-  class="bg-gray-700 p-2 rounded mb-3 w-full"
-  onchange="filtrarPorData()">
-
-<ul id="historico"></ul>
-
+</div>
 </div>
 
 <script>
-let dados = JSON.parse(localStorage.getItem("dados")) || [];
+// FIREBASE
+firebase.initializeApp({
+  apiKey: "AIzaSyDeXJ_uSeaLgPKRUA1nCV7UFwEzpmiOmHc",
+  authDomain: "meu-controle-financeiro-a0572.firebaseapp.com",
+  projectId: "meu-controle-financeiro-a0572",
+});
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let userId = null;
+let dados = [];
 
 // MENU
 function toggleMenu(){
   const menu = document.getElementById("sidebar");
+  const overlay = document.getElementById("overlay");
 
   if(menu.classList.contains("left-0")){
     menu.classList.remove("left-0");
     menu.classList.add("-left-64");
+    overlay.classList.add("hidden");
   } else {
     menu.classList.remove("-left-64");
     menu.classList.add("left-0");
+    overlay.classList.remove("hidden");
   }
 }
+
+// LOGIN
+function login(){
+  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+}
+function logout(){
+  auth.signOut();
+}
+
+auth.onAuthStateChanged(user=>{
+  if(user){
+    userId = user.uid;
+    document.getElementById("app").style.display="block";
+    load();
+  }
+});
 
 // TROCO
 function calcTroco(){
@@ -106,7 +156,7 @@ function toggleVenda(){
   vendasBox.classList.toggle("hidden", categoria.value!=="Vendas");
 }
 
-// ADD COM DATA
+// ADD
 function add(){
   const desc = document.getElementById("desc").value;
   if(!desc) return alert("Digite a descrição");
@@ -146,10 +196,7 @@ function atualizar(){
     li.className="bg-gray-700 p-2 mt-1 flex justify-between";
 
     if(d.categoria==="Vendas"){
-      li.innerHTML = `
-        ${d.desc} - R$ ${(d.valorProduto/100).toFixed(2)}
-        <span>${d.pagamento}</span>
-      `;
+      li.innerHTML = `${d.desc} - R$ ${(d.valorProduto/100).toFixed(2)} <span>${d.pagamento}</span>`;
 
       if(d.pagamento==="Dinheiro") dinheiro+=d.valorProduto;
       if(d.pagamento==="Débito") debito+=d.valorProduto;
@@ -171,12 +218,12 @@ function atualizar(){
   atualizarHistorico();
 }
 
-// HISTÓRICO COM DATA + CAIXA
+// HISTÓRICO
 function atualizarHistorico(){
   const dataFiltro = document.getElementById("filtroData").value;
   const historico = document.getElementById("historico");
 
-  historico.innerHTML = "";
+  historico.innerHTML="";
 
   if(!dataFiltro) return;
 
@@ -185,19 +232,12 @@ function atualizarHistorico(){
   let dinheiroDia = 0;
 
   filtrados.forEach(d=>{
-    const item=document.createElement("li");
-    item.className="bg-gray-700 p-2 mb-1 flex justify-between";
+    const item=document.createElement("div");
+    item.className="bg-gray-700 p-2 mb-1 rounded";
 
     if(d.categoria==="Vendas"){
-      item.innerHTML = `
-        ${d.desc} - R$ ${(d.valorProduto/100).toFixed(2)}
-        <span>${d.pagamento}</span>
-      `;
-
-      if(d.pagamento==="Dinheiro"){
-        dinheiroDia += d.valorProduto;
-      }
-
+      item.innerHTML = `${d.desc} - R$ ${(d.valorProduto/100).toFixed(2)} (${d.pagamento})`;
+      if(d.pagamento==="Dinheiro") dinheiroDia+=d.valorProduto;
     } else {
       item.innerText = `${d.desc} - R$ ${d.valor.toFixed(2)}`;
     }
@@ -205,42 +245,31 @@ function atualizarHistorico(){
     historico.appendChild(item);
   });
 
-  // CAIXA DO DIA
   const inicial = parseFloat(trocoInicial.value)||0;
   const final = parseFloat(trocoFinal.value)||0;
 
   const esperado = inicial + (dinheiroDia/100);
   const diferencaValor = final - esperado;
 
-  const resumo = document.createElement("div");
-  resumo.className="mt-3 p-2 bg-gray-800 rounded";
-
-  resumo.innerHTML = `
-    <p>💵 Dinheiro do dia: R$ ${(dinheiroDia/100).toFixed(2)}</p>
-    <p>📦 Esperado: R$ ${esperado.toFixed(2)}</p>
-    <p class="${diferencaValor < 0 ? "text-red-400":"text-green-400"}">
-      Diferença: R$ ${diferencaValor.toFixed(2)}
-    </p>
-  `;
-
-  historico.appendChild(resumo);
+  diferenca.innerText = diferencaValor.toFixed(2);
 }
 
-// FILTRO
-function filtrarPorData(){
-  atualizarHistorico();
+// FIREBASE
+async function load(){
+  const doc = await db.collection("users").doc(userId).get();
+  if(doc.exists){
+    dados = doc.data().dados || [];
+  }
+  atualizar();
 }
 
-// SAVE
-function salvar(){
-  localStorage.setItem("dados", JSON.stringify(dados));
+async function salvar(){
+  await db.collection("users").doc(userId).set({dados});
 }
 
-// INIT
+// INIT DATA
 const hoje = new Date().toISOString().split("T")[0];
 document.getElementById("filtroData").value = hoje;
-
-atualizar();
 </script>
 
 </body>
