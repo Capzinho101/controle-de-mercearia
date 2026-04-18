@@ -306,32 +306,6 @@ function atualizarHistorico(){
     atualizar();
   }
 }
-  // EDITAR
-  function editar(i){
-  const d = dados[i];
-
-  const novaDesc = prompt("Editar descrição:", d.desc);
-  if(novaDesc === null) return;
-
-  if(d.categoria === "Vendas"){
-    const novoValor = prompt("Editar valor:", (d.valorProduto/100).toFixed(2));
-    if(novoValor === null) return;
-
-    d.desc = novaDesc;
-    d.valorProduto = Math.round(parseFloat(novoValor) * 100);
-
-  } else {
-    const novoValor = prompt("Editar valor:", d.valor);
-    if(novoValor === null) return;
-
-    d.desc = novaDesc;
-    d.valor = parseFloat(novoValor);
-  }
-
-  salvar();
-  atualizar();
-}
-
 // FIREBASE
 async function load(){
   const doc = await db.collection("users").doc(userId).get();
