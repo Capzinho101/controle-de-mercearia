@@ -123,7 +123,7 @@ const firebaseConfig = {
   messagingSenderId: "202199536593",
   appId: "1:202199536593:web:5ec609a43788066886c6f0"
 };
-
+firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
@@ -303,6 +303,9 @@ function atualizarHistorico(){
   const diferencaValor = final - esperado;
 
   diferenca.innerText = diferencaValor.toFixed(2);
+}
+  function filtrarPorData(){
+  atualizarHistorico();
 }
   // REMOVER
 function remover(i){
