@@ -152,13 +152,6 @@ function logout(){
   auth.signOut();
 }
 
-auth.onAuthStateChanged(user=>{
-  if(user){
-    userId = user.uid;
-    document.getElementById("app").style.display="block";
-    load();
-  }
-});
 auth.onAuthStateChanged(async user=>{
   if(user){
     userId = user.uid;
