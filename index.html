@@ -10,7 +10,7 @@
 <body class="bg-gray-900 text-white">
 
 <!-- MENU -->
-<div id="sidebar" class="fixed left-[-260px] top-0 w-64 h-full bg-gray-800 p-4 transition-all z-50">
+<div id="sidebar" class="fixed -left-64 top-0 w-64 h-full bg-gray-800 p-4 transition-all duration-300 z-50">
   <h2 class="text-xl mb-4">Menu</h2>
 
   <p class="mb-2">Resumo:</p>
@@ -67,7 +67,13 @@
 
 <ul id="lista" class="mt-4"></ul>
 
-<h2 class="mt-6">📜 Histórico</h2>
+<!-- CALENDÁRIO -->
+<h2 class="mt-6">📅 Histórico por data</h2>
+
+<input type="date" id="filtroData"
+  class="bg-gray-700 p-2 rounded mb-3 w-full"
+  onchange="filtrarPorData()">
+
 <ul id="historico"></ul>
 
 </div>
@@ -77,8 +83,15 @@ let dados = JSON.parse(localStorage.getItem("dados")) || [];
 
 // MENU
 function toggleMenu(){
-  const m = document.getElementById("sidebar");
-  m.style.left = m.style.left==="0px" ? "-260px":"0px";
+  const menu = document.getElementById("sidebar");
+
+  if(menu.classList.contains("left-0")){
+    menu.classList.remove("left-0");
+    menu.classList.add("-left-64");
+  } else {
+    menu.classList.remove("-left-64");
+    menu.classList.add("left-0");
+  }
 }
 
 // TROCO
@@ -93,24 +106,27 @@ function toggleVenda(){
   vendasBox.classList.toggle("hidden", categoria.value!=="Vendas");
 }
 
-// ADD
+// ADD COM DATA
 function add(){
   const desc = document.getElementById("desc").value;
-
   if(!desc) return alert("Digite a descrição");
+
+  const hoje = new Date().toISOString().split("T")[0];
 
   if(categoria.value==="Vendas"){
     dados.push({
       desc,
       categoria:"Vendas",
       valorProduto: Math.round(valorProduto.value*100),
-      pagamento: pagamento.value
+      pagamento: pagamento.value,
+      data: hoje
     });
   } else {
     dados.push({
       desc,
       categoria: categoria.value,
-      valor: parseFloat(valor.value) || 0
+      valor: parseFloat(valor.value) || 0,
+      data: hoje
     });
   }
 
@@ -125,7 +141,7 @@ function atualizar(){
 
   let dinheiro=0, debito=0, credito=0, pix=0;
 
-  dados.forEach((d,i)=>{
+  dados.forEach(d=>{
     const li=document.createElement("li");
     li.className="bg-gray-700 p-2 mt-1 flex justify-between";
 
@@ -152,19 +168,78 @@ function atualizar(){
   resCredito.innerText=(credito/100).toFixed(2);
   resPix.innerText=(pix/100).toFixed(2);
 
-  // CAIXA
-  const esperado = (parseFloat(trocoInicial.value)||0) + (dinheiro/100);
-  const final = parseFloat(trocoFinal.value)||0;
-
-  diferenca.innerText = (final - esperado).toFixed(2);
+  atualizarHistorico();
 }
 
-// SAVE LOCAL
+// HISTÓRICO COM DATA + CAIXA
+function atualizarHistorico(){
+  const dataFiltro = document.getElementById("filtroData").value;
+  const historico = document.getElementById("historico");
+
+  historico.innerHTML = "";
+
+  if(!dataFiltro) return;
+
+  const filtrados = dados.filter(d => d.data === dataFiltro);
+
+  let dinheiroDia = 0;
+
+  filtrados.forEach(d=>{
+    const item=document.createElement("li");
+    item.className="bg-gray-700 p-2 mb-1 flex justify-between";
+
+    if(d.categoria==="Vendas"){
+      item.innerHTML = `
+        ${d.desc} - R$ ${(d.valorProduto/100).toFixed(2)}
+        <span>${d.pagamento}</span>
+      `;
+
+      if(d.pagamento==="Dinheiro"){
+        dinheiroDia += d.valorProduto;
+      }
+
+    } else {
+      item.innerText = `${d.desc} - R$ ${d.valor.toFixed(2)}`;
+    }
+
+    historico.appendChild(item);
+  });
+
+  // CAIXA DO DIA
+  const inicial = parseFloat(trocoInicial.value)||0;
+  const final = parseFloat(trocoFinal.value)||0;
+
+  const esperado = inicial + (dinheiroDia/100);
+  const diferencaValor = final - esperado;
+
+  const resumo = document.createElement("div");
+  resumo.className="mt-3 p-2 bg-gray-800 rounded";
+
+  resumo.innerHTML = `
+    <p>💵 Dinheiro do dia: R$ ${(dinheiroDia/100).toFixed(2)}</p>
+    <p>📦 Esperado: R$ ${esperado.toFixed(2)}</p>
+    <p class="${diferencaValor < 0 ? "text-red-400":"text-green-400"}">
+      Diferença: R$ ${diferencaValor.toFixed(2)}
+    </p>
+  `;
+
+  historico.appendChild(resumo);
+}
+
+// FILTRO
+function filtrarPorData(){
+  atualizarHistorico();
+}
+
+// SAVE
 function salvar(){
   localStorage.setItem("dados", JSON.stringify(dados));
 }
 
 // INIT
+const hoje = new Date().toISOString().split("T")[0];
+document.getElementById("filtroData").value = hoje;
+
 atualizar();
 </script>
 
